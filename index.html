@@ -1070,6 +1070,8 @@ function buildBrainContext() {
 function buildVessels() {
   VESSEL_DATA.forEach(data => {
     const curve = new THREE.CatmullRomCurve3(data.points);
+
+    // Visual tube
     const geo = new THREE.TubeGeometry(curve, 64, data.radius, 16, false);
     const colorHex = parseInt(data.color.slice(1), 16);
     const mat = new THREE.MeshPhongMaterial({
@@ -1081,6 +1083,12 @@ function buildVessels() {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.userData = Object.assign({}, data, { originalColorHex: colorHex });
 
+    // Invisible hit tube — 3× radius so it's clickable from any camera distance
+    const hitGeo = new THREE.TubeGeometry(curve, 32, Math.max(data.radius * 3, 0.4), 6, false);
+    const hitMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+    const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+    hitMesh.userData = Object.assign({}, data, { originalColorHex: colorHex, visualMesh: mesh });
+
     // Abbreviation label
     const div = document.createElement('div');
     div.className = 'vessel-label';
@@ -1091,7 +1099,8 @@ function buildVessels() {
     mesh.add(label);
 
     scene.add(mesh);
-    interactableMeshes.push(mesh);
+    scene.add(hitMesh);
+    interactableMeshes.push(hitMesh);  // raycast against hit tube, not visual
   });
 }
 
@@ -1152,7 +1161,7 @@ function onMouseMove(e) {
   }
 
   if (hits.length > 0) {
-    hoveredMesh = hits[0].object;
+    hoveredMesh = hits[0].object.userData.visualMesh || hits[0].object;
     if (hoveredMesh !== selectedMesh) {
       hoveredMesh.material.emissive.setHex(0x3a3a3a);
     }
