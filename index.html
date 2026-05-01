@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circle of Willis — 3D Anatomy</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0f;
+  color: #e8e8f0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  overflow: hidden;
+}
+
+#scene-container {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+}
+
+#label-container {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+#tooltip {
+  position: fixed;
+  background: rgba(10, 10, 20, 0.93);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #e8e8f0;
+  pointer-events: none;
+  display: none;
+  z-index: 10;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+#control-panel {
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 156px;
+}
+
+.ctrl-section-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: rgba(255,255,255,0.38);
+  padding: 5px 2px 2px;
+}
+
+.ctrl-btn {
+  background: rgba(18, 18, 32, 0.88);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 5px;
+  color: #d8d8e8;
+  padding: 7px 11px;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.ctrl-btn:hover {
+  background: rgba(35, 35, 55, 0.96);
+  border-color: rgba(255,255,255,0.38);
+  color: #fff;
+}
+.ctrl-btn.active {
+  background: rgba(22, 52, 90, 0.92);
+  border-color: #3a82d0;
+  color: #7ec8ff;
+}
+
+#legend {
+  position: fixed;
+  bottom: 20px; left: 16px;
+  z-index: 5;
+  background: rgba(10, 10, 20, 0.86);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+.legend-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: rgba(255,255,255,0.42);
+  margin-bottom: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0;
+  color: rgba(255,255,255,0.82);
+  font-size: 11.5px;
+}
+
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+#info-panel {
+  position: fixed;
+  bottom: 20px; right: 16px;
+  z-index: 5;
+  background: rgba(10, 10, 20, 0.93);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  padding: 14px 16px 14px;
+  width: 290px;
+  display: none;
+}
+
+.info-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 7px;
+  padding-right: 20px;
+}
+
+.info-color-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.info-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.35;
+}
+
+.info-territory {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 9px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  line-height: 1.4;
+}
+
+.info-notes {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.55;
+}
+
+#close-info {
+  position: absolute;
+  top: 10px; right: 11px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.38);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  line-height: 1;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+#close-info:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+.vessel-label {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(8, 8, 18, 0.80);
+  border: 1px solid rgba(255,255,255,0.26);
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+#nav-hint {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.28);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#title-bar {
+  position: fixed;
+  top: 16px; left: 16px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#title-bar h1 {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+
+#title-bar p {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.04em;
+}
+</style>
+</head>
+<body>
+
+<div id="scene-container"></div>
+<div id="label-container"></div>
+<div id="tooltip"></div>
+
+<div id="title-bar">
+  <h1>Circle of Willis</h1>
+  <p>CEREBROVASCULAR ANATOMY — 3D INTERACTIVE</p>
+</div>
+
+<div id="control-panel">
+  <div class="ctrl-section-label">Labels</div>
+  <button class="ctrl-btn active" id="btn-labels">Labels: ON</button>
+
+  <div class="ctrl-section-label">Camera View</div>
+  <button class="ctrl-btn" id="btn-view-default">CoW Ring</button>
+  <button class="ctrl-btn" id="btn-view-inferior">Inferior (Basal)</button>
+  <button class="ctrl-btn" id="btn-view-lateral">Lateral</button>
+  <button class="ctrl-btn" id="btn-view-anterior">Anterior</button>
+  <button class="ctrl-btn" id="btn-view-full">Full Anatomy</button>
+  <button class="ctrl-btn" id="btn-view-reset">Reset Camera</button>
+</div>
+
+<div id="legend">
+  <div class="legend-title">Vessel Territory</div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:#C62828"></span>
+    Anterior / Carotid
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:#1565C0"></span>
+    Posterior / Vertebrobasilar
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:#2E7D32"></span>
+    Communicating Arteries
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:#5D4037"></span>
+    Arch / Systemic Origin
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot" style="background:#B71C1C"></span>
+    External Carotid (face)
+  </div>
+</div>
+
+<div id="info-panel">
+  <button id="close-info">✕</button>
+  <div class="info-header">
+    <span class="info-color-dot" id="ip-dot"></span>
+    <span class="info-title" id="ip-title"></span>
+  </div>
+  <div class="info-territory" id="ip-territory"></div>
+  <div class="info-notes" id="ip-notes"></div>
+</div>
+
+<div id="nav-hint">Left-drag: rotate &nbsp;·&nbsp; Scroll: zoom &nbsp;·&nbsp; Mid/Right-drag: pan &nbsp;·&nbsp; Click vessel: details</div>
+
+<script src="three.min.js"></script>
+<script src="OrbitControls.js"></script>
+<script src="CSS2DRenderer.js"></script>
+
+<script>
+// Visible error trap — surfaces JS errors on-screen so they're never invisible
+window.onerror = function(msg, src, line) {
+  var el = document.getElementById('scene-container');
+  if (el) el.innerHTML = '<div style="color:#ff6b6b;font-family:monospace;padding:40px;font-size:13px;white-space:pre-wrap;">JS ERROR (line ' + line + '):\n' + msg + '\n\nSource: ' + src + '</div>';
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+
+const ANT  = '#C62828';   // Anterior circulation
+const POST = '#1565C0';   // Posterior circulation
+const COMM = '#2E7D32';   // Communicating arteries
+const SYST = '#5D4037';   // Systemic arch vessels (aorta, brachiocephalic, subclavian)
+const EXT  = '#B71C1C';   // External carotid (face/scalp, not brain)
+
+// ─── VESSEL DATA ─────────────────────────────────────────────────────────────
+// Coordinate system: +X = patient right, +Y = superior, +Z = anterior
+// Scale: 1 unit ≈ 1 cm. CoW ring sits at Y ≈ 2.5, Z from -2.0 to +0.7
+
+const VESSEL_DATA = [
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  POSTERIOR CIRCULATION
+  // ════════════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'BA',
+    name: 'Basilar Artery',
+    abbreviation: 'BA',
+    territory: 'Posterior — pons, midbrain, posterior thalamus, cerebellum',
+    color: POST,
+    radius: 0.20,
+    points: [
+      V(0, -2.0, -3.0),   // pontomedullary junction (VA convergence)
+      V(0, -0.5, -2.8),   // lower basilar
+      V(0,  1.0, -2.5),   // mid basilar
+      V(0,  2.2, -2.2),   // upper basilar
+      V(0,  2.5, -2.0),   // basilar tip / bifurcation
+    ],
+    labelOffset: V(0.48, 0, 0),
+    notes: 'Formed by convergence of both vertebral arteries at the pontomedullary junction. Runs superiorly in the prepontine cistern. Bifurcates at the pontomesencephalic junction into both PCAs. Basilar occlusion → "locked-in syndrome" (basilar artery thrombosis). Basilar tip aneurysms carry high surgical risk. Pontine perforators (paramedian branches) are critical and non-collateralized.'
+  },
+
+  {
+    id: 'VA_L',
+    name: 'Vertebral Artery (Left) — V4',
+    abbreviation: 'VA (L)',
+    territory: 'Posterior — lateral medulla, posterior fossa (via PICA)',
+    color: POST,
+    radius: 0.15,
+    points: [
+      V(-2.0, -4.0, -4.0),  // enters foramen magnum inferolaterally
+      V(-1.5, -3.2, -3.8),  // ascending along left side of medulla
+      V(-0.8, -2.8, -3.5),  // curving medially (PICA origin nearby)
+      V(-0.2, -2.2, -3.2),  // approaching midline
+      V( 0.0, -2.0, -3.0),  // converges with right VA → basilar
+    ],
+    labelOffset: V(-0.58, 0, 0),
+    notes: 'V4 (intracranial) segment shown. Pierces dura at foramen magnum. Dissection → Wallenberg syndrome (lateral medullary infarct: ipsilateral face, contralateral body pain/temperature loss, Horner syndrome, dysphagia, vertigo). The left VA is dominant in ~60% of people. Gives rise to PICA and anterior spinal artery.'
+  },
+
+  {
+    id: 'VA_R',
+    name: 'Vertebral Artery (Right) — V4',
+    abbreviation: 'VA (R)',
+    territory: 'Posterior — lateral medulla, posterior fossa (via PICA)',
+    color: POST,
+    radius: 0.15,
+    points: [
+      V( 2.0, -4.0, -4.0),
+      V( 1.5, -3.2, -3.8),
+      V( 0.8, -2.8, -3.5),
+      V( 0.2, -2.2, -3.2),
+      V( 0.0, -2.0, -3.0),
+    ],
+    labelOffset: V(0.58, 0, 0),
+    notes: 'V4 (intracranial) segment. Often smaller than left VA (hypoplastic right VA in ~30%). Bilateral VA occlusion → basilar insufficiency. Atherosclerosis of V4 origin is a common cause of posterior circulation TIA. Right VA dissection is a recognized complication of cervical manipulation.'
+  },
+
+  {
+    id: 'PICA_L',
+    name: 'Posterior Inferior Cerebellar Artery (Left)',
+    abbreviation: 'PICA (L)',
+    territory: 'Posterior — inferior cerebellum, cerebellar tonsil, lateral medulla',
+    color: POST,
+    radius: 0.10,
+    points: [
+      V(-0.8, -2.8, -3.5),  // origin from left VA (V4 segment)
+      V(-1.2, -3.2, -3.2),  // descending — the classic PICA loop
+      V(-1.5, -3.5, -2.8),  // caudal loop apex near cerebellar tonsil
+      V(-1.8, -3.0, -2.2),  // ascending limb, heading posterolateral
+      V(-2.0, -2.5, -2.0),  // distributes over inferior cerebellar hemisphere
+    ],
+    labelOffset: V(-0.52, 0, 0.35),
+    notes: 'Arises from V4. Most variable vessel in the CoW complex. The "PICA loop" dips to the level of the cerebellar tonsil — used surgically as a landmark for the tonsil. PICA infarct = Wallenberg syndrome: ipsilateral face, contralateral body pain/temperature loss, Horner syndrome, nystagmus, dysphagia, hiccup. May be absent (~5%) with AICA compensating.'
+  },
+
+  {
+    id: 'PICA_R',
+    name: 'Posterior Inferior Cerebellar Artery (Right)',
+    abbreviation: 'PICA (R)',
+    territory: 'Posterior — inferior cerebellum, cerebellar tonsil, lateral medulla',
+    color: POST,
+    radius: 0.10,
+    points: [
+      V( 0.8, -2.8, -3.5),
+      V( 1.2, -3.2, -3.2),
+      V( 1.5, -3.5, -2.8),
+      V( 1.8, -3.0, -2.2),
+      V( 2.0, -2.5, -2.0),
+    ],
+    labelOffset: V(0.52, 0, 0.35),
+    notes: 'Arises from right V4. Supplies posterior inferior cerebellar hemisphere, inferior vermis, and cerebellar tonsil. Occlusion causes lateral medullary infarct (Wallenberg). Tonsillar herniation from mass lesions compresses the PICA loop, making it a radiological marker for herniation severity on MRA.'
+  },
+
+  {
+    id: 'AICA_L',
+    name: 'Anterior Inferior Cerebellar Artery (Left)',
+    abbreviation: 'AICA (L)',
+    territory: 'Posterior — anterior inferior cerebellum, CN VII/VIII, lateral pons',
+    color: POST,
+    radius: 0.08,
+    points: [
+      V( 0.0, -1.5, -2.8),  // origin from proximal basilar
+      V(-0.8, -1.8, -2.5),  // coursing laterally, slightly inferior
+      V(-1.6, -2.0, -2.2),  // approaching cerebellopontine angle
+      V(-2.0, -2.2, -2.0),  // looping in CP angle (near CN VII/VIII)
+      V(-2.2, -2.0, -1.8),  // distributes over anterior inferior cerebellum
+    ],
+    labelOffset: V(-0.42, 0.38, 0),
+    notes: 'Arises from proximal basilar. Courses through the cerebellopontine angle alongside CN VII (facial) and CN VIII (vestibulocochlear). AICA loop enters and exits the internal auditory canal. AICA infarct → ipsilateral facial palsy + sensorineural hearing loss + vertigo + cerebellar ataxia + contralateral pain/temperature loss (lateral pontine syndrome).'
+  },
+
+  {
+    id: 'AICA_R',
+    name: 'Anterior Inferior Cerebellar Artery (Right)',
+    abbreviation: 'AICA (R)',
+    territory: 'Posterior — anterior inferior cerebellum, CN VII/VIII, lateral pons',
+    color: POST,
+    radius: 0.08,
+    points: [
+      V( 0.0, -1.5, -2.8),
+      V( 0.8, -1.8, -2.5),
+      V( 1.6, -2.0, -2.2),
+      V( 2.0, -2.2, -2.0),
+      V( 2.2, -2.0, -1.8),
+    ],
+    labelOffset: V(0.42, 0.38, 0),
+    notes: 'AICA infarct produces a characteristic syndrome: the combination of ipsilateral facial palsy (CN VII), hearing loss (CN VIII), Horner syndrome, and cerebellar signs with contralateral hemibody pain/temperature loss localizes precisely to the lateral pons. The labyrinthine artery (internal auditory artery) typically arises from AICA.'
+  },
+
+  {
+    id: 'SCA_L',
+    name: 'Superior Cerebellar Artery (Left)',
+    abbreviation: 'SCA (L)',
+    territory: 'Posterior — superior cerebellum, dentate nucleus, superior cerebellar peduncle',
+    color: POST,
+    radius: 0.08,
+    points: [
+      V( 0.0,  2.0, -2.3),  // origin from distal basilar, just below bifurcation
+      V(-0.8,  1.8, -2.2),  // coursing laterally under CN III
+      V(-1.5,  1.6, -2.0),  // running beneath tentorium cerebelli
+      V(-2.0,  1.5, -1.8),  // lateral, approaching superior cerebellar surface
+      V(-2.5,  1.4, -1.5),  // distributes over superior cerebellar hemisphere
+    ],
+    labelOffset: V(-0.38, 0.42, 0),
+    notes: 'Arises from distal basilar just below PCA bifurcation, running beneath the tentorium. Courses near CN III (oculomotor) — SCA aneurysms can cause CN III palsy. SCA infarct: contralateral limb/gait ataxia (dentate nucleus, superior cerebellar peduncle), often spares cerebellar tonsil. May cause ipsilateral Horner syndrome and contralateral pain/temperature loss.'
+  },
+
+  {
+    id: 'SCA_R',
+    name: 'Superior Cerebellar Artery (Right)',
+    abbreviation: 'SCA (R)',
+    territory: 'Posterior — superior cerebellum, dentate nucleus, superior cerebellar peduncle',
+    color: POST,
+    radius: 0.08,
+    points: [
+      V( 0.0,  2.0, -2.3),
+      V( 0.8,  1.8, -2.2),
+      V( 1.5,  1.6, -2.0),
+      V( 2.0,  1.5, -1.8),
+      V( 2.5,  1.4, -1.5),
+    ],
+    labelOffset: V(0.38, 0.42, 0),
+    notes: 'Arises from distal basilar. SCA infarct produces contralateral limb and gait ataxia, often with ipsilateral Horner syndrome. Because SCA and PCA share an origin at the basilar tip, both may be affected in basilar tip pathology. SCA infarct mimics PICA clinically but has different territory — imaging distinguishes them.'
+  },
+
+  {
+    id: 'PCA_L',
+    name: 'Posterior Cerebral Artery (Left) — P1 + P2',
+    abbreviation: 'PCA (L)',
+    territory: 'Posterior — occipital lobe, thalamus, midbrain, medial temporal lobe',
+    color: POST,
+    radius: 0.15,
+    points: [
+      V( 0.0,  2.5, -2.0),  // P1 origin at basilar bifurcation
+      V(-0.8,  2.5, -2.0),  // P1 — horizontal, coursing laterally
+      V(-1.5,  2.3, -1.8),  // P1/P2 junction — PComm inserts here
+      V(-2.2,  2.0, -1.5),  // P2 — beginning to curve posteriorly around midbrain
+      V(-2.8,  1.8, -1.0),  // P2 — continuing posterior along tentorium
+    ],
+    labelOffset: V(-0.58, 0.38, 0),
+    notes: 'P1 = precommunicating segment (basilar tip → PComm insertion). P2 = postcommunicating segment (curves around midbrain in the ambient cistern). PCA infarct → contralateral homonymous hemianopia (occipital cortex), with macular sparing if collaterals preserved. P1 occlusion affects thalamus (thalamic infarct → contralateral hemisensory loss, memory impairment). ~20% of PCAs have "fetal" origin from ICA (large PComm replaces P1).'
+  },
+
+  {
+    id: 'PCA_R',
+    name: 'Posterior Cerebral Artery (Right) — P1 + P2',
+    abbreviation: 'PCA (R)',
+    territory: 'Posterior — occipital lobe, thalamus, midbrain, medial temporal lobe',
+    color: POST,
+    radius: 0.15,
+    points: [
+      V( 0.0,  2.5, -2.0),
+      V( 0.8,  2.5, -2.0),
+      V( 1.5,  2.3, -1.8),
+      V( 2.2,  2.0, -1.5),
+      V( 2.8,  1.8, -1.0),
+    ],
+    labelOffset: V(0.58, 0.38, 0),
+    notes: 'P1 (precommunicating) + P2 (postcommunicating). Right PCA infarct: left homonymous hemianopia. Dominant hemisphere (left) PCA infarct may cause alexia without agraphia (splenium of corpus callosum), transcortical sensory aphasia. Posterior choroidal arteries arise from P2. The hippocampus receives PCA supply — bilateral PCA infarct causes profound amnestic syndrome.'
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  ANTERIOR CIRCULATION
+  // ════════════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'ICA_L',
+    name: 'Internal Carotid Artery (Left) — C6/C7',
+    abbreviation: 'ICA (L)',
+    territory: 'Anterior — ipsilateral cerebral hemisphere, anterior choroidal territory',
+    color: ANT,
+    radius: 0.25,
+    points: [
+      V(-2.5, -3.0, -1.0),  // C6 cavernous segment entry (parasellar)
+      V(-2.3, -1.5, -0.8),  // ascending through cavernous sinus
+      V(-2.2,  0.0, -0.5),  // C6/C7 transition at anterior clinoid process
+      V(-2.0,  1.5, -0.3),  // C7 supraclinoid, ascending toward skull base
+      V(-2.0,  2.5,  0.0),  // ICA terminus — bifurcates into MCA + ACA
+    ],
+    labelOffset: V(-0.62, 0, 0.32),
+    notes: 'C6 (cavernous) → C7 (supraclinoid) segments shown. The "carotid siphon" S-curve visible on angiography. Most common site of extracranial atherosclerosis is the carotid bifurcation (in neck, not shown). C7 gives rise to the anterior choroidal artery (supplies internal capsule, hippocampus, basal ganglia). ICA terminus bifurcates into MCA and ACA. Carotid siphon calcification visible on non-contrast CT.'
+  },
+
+  {
+    id: 'ICA_R',
+    name: 'Internal Carotid Artery (Right) — C6/C7',
+    abbreviation: 'ICA (R)',
+    territory: 'Anterior — ipsilateral cerebral hemisphere, anterior choroidal territory',
+    color: ANT,
+    radius: 0.25,
+    points: [
+      V( 2.5, -3.0, -1.0),
+      V( 2.3, -1.5, -0.8),
+      V( 2.2,  0.0, -0.5),
+      V( 2.0,  1.5, -0.3),
+      V( 2.0,  2.5,  0.0),
+    ],
+    labelOffset: V(0.62, 0, 0.32),
+    notes: 'C6 (cavernous) → C7 (supraclinoid) segments. ICA dissection causes ipsilateral Horner syndrome (disrupts sympathetic chain within carotid wall) and can cause embolic stroke. C7 gives rise to anterior choroidal artery and ophthalmic artery (optic nerve supply). Historically, ICA ligation was used for giant cavernous sinus aneurysms when collateral via AComm was sufficient.'
+  },
+
+  {
+    id: 'MCA_L',
+    name: 'Middle Cerebral Artery (Left) — M1 Segment',
+    abbreviation: 'MCA (L)',
+    territory: 'Anterior — lateral hemisphere: motor/sensory cortex, Broca area, insular cortex',
+    color: ANT,
+    radius: 0.175,
+    points: [
+      V(-2.0,  2.5,  0.0),  // origin at ICA terminus
+      V(-3.0,  2.5,  0.3),  // M1 — coursing laterally over insula, slight anterior drift
+      V(-4.0,  2.5,  0.5),  // mid M1 (lenticulostriate arteries arise here)
+      V(-4.8,  2.4,  0.8),  // approaching sylvian fissure
+      V(-5.5,  2.3,  1.0),  // sylvian fissure entry (M1 terminus / M2 origin)
+    ],
+    labelOffset: V(0, 0.48, 0),
+    notes: 'M1 (sphenoidal) segment, from ICA terminus to sylvian fissure entry. Largest branch of ICA and largest territory cerebral artery. Lenticulostriate arteries (small perforators) arise from M1 — supply internal capsule, putamen, caudate head. M1 occlusion = large MCA syndrome: contralateral dense hemiplegia (arm > leg), hemianopia, hemisensory loss, ipsilateral gaze preference. Dominant hemisphere → global aphasia. Primary mechanical thrombectomy target.'
+  },
+
+  {
+    id: 'MCA_R',
+    name: 'Middle Cerebral Artery (Right) — M1 Segment',
+    abbreviation: 'MCA (R)',
+    territory: 'Anterior — lateral hemisphere: motor/sensory cortex, visuospatial areas (non-dominant)',
+    color: ANT,
+    radius: 0.175,
+    points: [
+      V( 2.0,  2.5,  0.0),
+      V( 3.0,  2.5,  0.3),
+      V( 4.0,  2.5,  0.5),
+      V( 4.8,  2.4,  0.8),
+      V( 5.5,  2.3,  1.0),
+    ],
+    labelOffset: V(0, 0.48, 0),
+    notes: 'M1 (sphenoidal) segment. Non-dominant (right) MCA infarct causes left hemiplegia/hemisensory loss, left hemineglect, anosognosia (unawareness of deficit), constructional apraxia, and left hemianopia. Hemispatial neglect is more severe with non-dominant MCA infarcts than dominant. Most common target for endovascular thrombectomy in acute ischemic stroke.'
+  },
+
+  {
+    id: 'ACA_A1_L',
+    name: 'Anterior Cerebral Artery (Left) — A1 Segment',
+    abbreviation: 'ACA A1 (L)',
+    territory: 'Anterior — medial frontal lobe, paracentral lobule (lower extremity area)',
+    color: ANT,
+    radius: 0.125,
+    points: [
+      V(-2.0,  2.5,  0.0),  // origin at ICA terminus
+      V(-1.2,  2.5,  0.3),  // coursing medially over optic chiasm/tract
+      V(-0.5,  2.5,  0.5),  // approaching midline
+      V( 0.0,  2.5,  0.6),  // AComm junction
+    ],
+    labelOffset: V(0, 0.48, 0.3),
+    notes: 'A1 (precommunicating) segment, from ICA terminus to AComm. Medial lenticulostriate arteries (Heubner\'s recurrent artery) arise from A1 or proximal A2 — supply caudate head, anterior internal capsule. A1 hypoplasia (~10%) means the contralateral A1 + AComm supply both ACAs — knowledge essential for aneurysm surgery. Courses over the optic chiasm, making A1 aneurysms risk visual field defects.'
+  },
+
+  {
+    id: 'ACA_A1_R',
+    name: 'Anterior Cerebral Artery (Right) — A1 Segment',
+    abbreviation: 'ACA A1 (R)',
+    territory: 'Anterior — medial frontal lobe, paracentral lobule (lower extremity area)',
+    color: ANT,
+    radius: 0.125,
+    points: [
+      V( 2.0,  2.5,  0.0),
+      V( 1.2,  2.5,  0.3),
+      V( 0.5,  2.5,  0.5),
+      V( 0.0,  2.5,  0.6),
+    ],
+    labelOffset: V(0, 0.48, 0.3),
+    notes: 'A1 precommunicating segment. When unilateral A1 is hypoplastic or absent, the contralateral A1 carries all ACA flow through the AComm — single vessel stenosis can produce bilateral ACA territory infarction. A1 is the segment where the AComm complex forms the most common intracranial aneurysm cluster.'
+  },
+
+  {
+    id: 'ACA_A2_L',
+    name: 'Anterior Cerebral Artery (Left) — A2 Segment',
+    abbreviation: 'ACA A2 (L)',
+    territory: 'Anterior — medial frontal lobe, cingulate gyrus, paracentral lobule, corpus callosum',
+    color: ANT,
+    radius: 0.125,
+    points: [
+      V( 0.0,  2.5,  0.6),  // AComm junction / A1-A2 transition
+      V(-0.3,  3.5,  0.8),  // ascending into interhemispheric fissure, slight left offset
+      V(-0.4,  4.8,  1.0),  // coursing superiorly along corpus callosum
+      V(-0.5,  6.0,  0.8),  // higher A2, heading posteriorly along callosal surface
+    ],
+    labelOffset: V(-0.52, 0, 0),
+    notes: 'A2 (postcommunicating) segment ascends in the interhemispheric fissure, arching over the corpus callosum. ACA territory infarct → contralateral proximal leg weakness (paracentral lobule — the leg representation is medial, contrasting with the lateral arm area in MCA territory), urinary incontinence (cingulate), frontal lobe behavioral changes, abulia. Bilateral A2 infarct (from single AComm aneurysm) causes akinetic mutism.'
+  },
+
+  {
+    id: 'ACA_A2_R',
+    name: 'Anterior Cerebral Artery (Right) — A2 Segment',
+    abbreviation: 'ACA A2 (R)',
+    territory: 'Anterior — medial frontal lobe, cingulate gyrus, paracentral lobule, corpus callosum',
+    color: ANT,
+    radius: 0.125,
+    points: [
+      V( 0.0,  2.5,  0.6),
+      V( 0.3,  3.5,  0.8),
+      V( 0.4,  4.8,  1.0),
+      V( 0.5,  6.0,  0.8),
+    ],
+    labelOffset: V(0.52, 0, 0),
+    notes: 'A2 postcommunicating segment. Right ACA infarct causes left leg monoplegia/weakness (paracentral lobule), left-sided neglect less pronounced than MCA territory. The two A2 segments run together in the interhemispheric fissure, separated by only millimeters, making them distinguishable on high-resolution MRA. Pericallosal and callosomarginal arteries are the major A2 branches.'
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  COMMUNICATING ARTERIES
+  // ════════════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'AComm',
+    name: 'Anterior Communicating Artery',
+    abbreviation: 'AComm',
+    territory: 'Communicating — connects bilateral ACA A1 segments; anterior circle closure',
+    color: COMM,
+    radius: 0.07,
+    points: [
+      V(-0.3,  2.5,  0.6),  // left A1/AComm junction
+      V( 0.0,  2.5,  0.72), // midpoint (slight anterior bow — anatomically correct)
+      V( 0.3,  2.5,  0.6),  // right A1/AComm junction
+    ],
+    labelOffset: V(0, 0.48, 0.35),
+    notes: 'Most common site of intracranial aneurysm (~30–35% of all cerebral aneurysms). Short midline vessel just anterior to the optic chiasm. Rupture → subarachnoid hemorrhage (sudden severe headache, "thunderclap"), often with intraventricular hemorrhage causing communicating hydrocephalus. Critical collateral: when one ICA is occluded, AComm enables contralateral ICA to supply both ACA territories. Anatomic duplications, fenestrations, and absence variants are common (~10–15%).'
+  },
+
+  {
+    id: 'PComm_L',
+    name: 'Posterior Communicating Artery (Left)',
+    abbreviation: 'PComm (L)',
+    territory: 'Communicating — connects left ICA to left PCA; anterior–posterior collateral',
+    color: COMM,
+    radius: 0.10,
+    points: [
+      V(-2.0,  2.5,  0.0),  // origin from supraclinoid ICA (C7)
+      V(-1.8,  2.5, -0.6),  // coursing posteriorly along floor of third ventricle
+      V(-1.5,  2.4, -1.2),  // continuing posterior, approaching PCA
+      V(-1.5,  2.3, -1.8),  // inserts into PCA at P1/P2 junction
+    ],
+    labelOffset: V(0, 0.5, 0.35),
+    notes: '2nd most common site of intracranial aneurysm (~25%). PComm aneurysm classically compresses CN III at its exit from the midbrain → pupil-involving oculomotor palsy (ptosis, "down and out" eye, dilated fixed pupil — the "surgical third nerve palsy"). When PComm is large and P1 is hypoplastic, the PCA arises from the ICA ("fetal PCA" variant, ~20%). Critical collateral bridge between anterior and posterior circulations.'
+  },
+
+  {
+    id: 'PComm_R',
+    name: 'Posterior Communicating Artery (Right)',
+    abbreviation: 'PComm (R)',
+    territory: 'Communicating — connects right ICA to right PCA; anterior–posterior collateral',
+    color: COMM,
+    radius: 0.10,
+    points: [
+      V( 2.0,  2.5,  0.0),
+      V( 1.8,  2.5, -0.6),
+      V( 1.5,  2.4, -1.2),
+      V( 1.5,  2.3, -1.8),
+    ],
+    labelOffset: V(0, 0.5, 0.35),
+    notes: 'Connects right supraclinoid ICA to right PCA P1/P2 junction. Fetal PCA is present when this vessel is large (>1.5 mm) and the ipsilateral P1 is absent or hypoplastic — then the right PCA is supplied by the ICA rather than the basilar. This anatomic variant (20% of people) changes collateral reserve: basilar occlusion may not cause PCA infarct on the fetal side.'
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  SYSTEMIC ARCH VESSELS  (schematic — shows origin of cerebral supply)
+  // Aortic arch sits at Y ≈ −22 to −24; carotid bifurcations at Y ≈ −13
+  // ════════════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'AORTIC_ARCH',
+    name: 'Aortic Arch',
+    abbreviation: 'Aortic Arch',
+    territory: 'Systemic — gives rise to all cerebral arterial supply via three branches',
+    color: SYST,
+    radius: 0.60,
+    points: [
+      V( 2.0, -24.5, -0.5),  // ascending aorta (schematic entry, right of midline)
+      V( 1.0, -23.0, -1.2),  // arch curves left and posteriorly; brachiocephalic arises here
+      V( 0.0, -22.5, -1.5),  // arch apex; left CCA arises here
+      V(-1.0, -23.0, -2.0),  // left subclavian arises here
+      V(-2.5, -24.5, -2.0),  // descending aorta (schematic)
+    ],
+    labelOffset: V(0.8, 0, 0),
+    notes: 'Schematic representation. The aortic arch gives rise to three great vessels supplying the head, neck, and arms: (1) Brachiocephalic trunk (right), (2) Left common carotid artery, (3) Left subclavian artery. The right common carotid and right subclavian arise indirectly via the brachiocephalic. Approximately 1% of people have a "bovine arch" variant where the left CCA shares an origin with the brachiocephalic.'
+  },
+
+  {
+    id: 'BRACHIOCEPHALIC',
+    name: 'Brachiocephalic Trunk (Innominate Artery)',
+    abbreviation: 'Brachiocep.',
+    territory: 'Systemic — supplies right common carotid and right subclavian arteries',
+    color: SYST,
+    radius: 0.42,
+    points: [
+      V( 0.8, -23.0, -1.3),  // origin from aortic arch (first/rightmost branch)
+      V( 1.2, -22.0, -1.0),  // ascending toward right
+      V( 1.5, -20.8, -0.8),  // terminus: bifurcates into right CCA + right subclavian
+    ],
+    labelOffset: V(0.5, 0, 0.4),
+    notes: 'Innominate artery. The only branch of the aortic arch that immediately bifurcates. Arises from the right side of the arch and divides behind the right sternoclavicular joint into the right common carotid artery and right subclavian artery. Absent on the left — the left CCA and left subclavian arise directly from the arch. Occlusion causes subclavian steal syndrome (right arm exercise diverts blood from vertebral artery retrograde into the arm).'
+  },
+
+  {
+    id: 'SUBCLAVIAN_R',
+    name: 'Subclavian Artery (Right)',
+    abbreviation: 'Subclavian (R)',
+    territory: 'Systemic — gives origin to right vertebral artery',
+    color: SYST,
+    radius: 0.36,
+    points: [
+      V( 1.5, -20.8, -0.8),  // origin from brachiocephalic terminus
+      V( 2.5, -20.3, -0.5),  // first part (VA and IMA arise here)
+      V( 3.8, -19.8, -0.2),  // second part (behind anterior scalene)
+      V( 5.0, -19.5,  0.2),  // third part (lateral — schematic only)
+    ],
+    labelOffset: V(0, 0.5, 0),
+    notes: 'Right subclavian artery, arising from the brachiocephalic trunk. The vertebral artery arises from the superior aspect of the first part of the right subclavian. Subclavian steal syndrome occurs when proximal subclavian stenosis (before VA origin) causes retrograde flow in the vertebral artery during arm exercise, producing posterior circulation symptoms (vertigo, diplopia, drop attacks).'
+  },
+
+  {
+    id: 'SUBCLAVIAN_L',
+    name: 'Subclavian Artery (Left)',
+    abbreviation: 'Subclavian (L)',
+    territory: 'Systemic — gives origin to left vertebral artery',
+    color: SYST,
+    radius: 0.36,
+    points: [
+      V(-1.0, -23.0, -2.0),  // origin directly from aortic arch (third branch)
+      V(-2.0, -21.5, -1.5),  // ascending and coursing left
+      V(-3.2, -20.5, -1.0),  // first part (VA arises here)
+      V(-4.5, -19.8, -0.5),  // second/third part (schematic)
+      V(-5.5, -19.5, -0.2),  // lateral extent (schematic)
+    ],
+    labelOffset: V(0, 0.5, 0),
+    notes: 'Left subclavian artery arises directly from the aortic arch (third branch, after brachiocephalic and left CCA). Vertebral artery arises from first part. Left subclavian occlusion proximal to VA origin is the more common cause of subclavian steal syndrome (left arm predominates). The thoracic duct also runs near the left subclavian — relevant in central line placement.'
+  },
+
+  {
+    id: 'CCA_R',
+    name: 'Common Carotid Artery (Right)',
+    abbreviation: 'CCA (R)',
+    territory: 'Anterior — supplies right hemisphere via ICA; face/neck via ECA',
+    color: ANT,
+    radius: 0.24,
+    points: [
+      V( 1.5, -20.8, -0.8),  // origin from brachiocephalic terminus
+      V( 1.6, -18.0, -0.9),  // ascending in carotid sheath
+      V( 1.7, -15.5, -0.9),  // mid CCA
+      V( 1.8, -13.0, -0.9),  // CCA bifurcation at C3–C4 vertebral level
+    ],
+    labelOffset: V(0.52, 0, 0),
+    notes: 'Right CCA, ascending in the carotid sheath alongside the internal jugular vein and vagus nerve. No branches in the neck before its bifurcation. Bifurcates at the C3–C4 level (clinically at the upper border of the thyroid cartilage) into the internal carotid (ICA) and external carotid (ECA) arteries. Common site of atheromatous plaque; carotid endarterectomy is performed at this bifurcation. Carotid bruit on auscultation suggests stenosis.'
+  },
+
+  {
+    id: 'CCA_L',
+    name: 'Common Carotid Artery (Left)',
+    abbreviation: 'CCA (L)',
+    territory: 'Anterior — supplies left hemisphere via ICA; face/neck via ECA',
+    color: ANT,
+    radius: 0.24,
+    points: [
+      V(-0.2, -22.5, -1.5),  // origin directly from aortic arch (second branch)
+      V(-1.2, -19.0, -1.1),  // ascending, curving laterally in the neck
+      V(-1.6, -15.5, -0.95), // mid CCA
+      V(-1.8, -13.0, -0.9),  // CCA bifurcation at C3–C4 level
+    ],
+    labelOffset: V(-0.52, 0, 0),
+    notes: 'Left CCA arises directly from the aortic arch (unlike right CCA which comes from the brachiocephalic). Has a longer intrathoracic course before entering the neck. Bifurcates at C3–C4 into ICA and ECA. The carotid sinus (a baroreceptor) and carotid body (a chemoreceptor) are located at the bifurcation. Carotid massage at the sinus can slow the heart rate (used for SVT).'
+  },
+
+  {
+    id: 'ICA_CERV_R',
+    name: 'Internal Carotid Artery (Right) — Cervical + Petrous (C1–C5)',
+    abbreviation: 'ICA C1–5 (R)',
+    territory: 'Anterior — ascending to supply right cerebral hemisphere',
+    color: ANT,
+    radius: 0.23,
+    points: [
+      V( 1.8, -13.0, -0.9),  // origin at carotid bifurcation (C1 cervical segment)
+      V( 2.0,  -9.0, -0.8),  // cervical ICA, ascending without branches
+      V( 2.2,  -6.0, -0.5),  // entering carotid canal in petrous bone (C2 petrous)
+      V( 2.4,  -4.0, -0.8),  // through petrous canal, curving medially (C3–C4 lacerum/cavernous)
+      V( 2.5,  -3.0, -1.0),  // enters cavernous sinus (C6 — connects to existing ICA_R model)
+    ],
+    labelOffset: V(0.55, 0, 0.2),
+    notes: 'C1 (cervical) segment has no branches and ascends in the carotid sheath. C2 (petrous) enters the carotid canal in the petrous temporal bone and curves anteromedially — this S-curve creates the "carotid siphon" visible on angiography. C3 (lacerum) passes over the foramen lacerum. C4–C5 enter the cavernous sinus. No arterial branches arise until C7 (supraclinoid). ICA dissection (trauma, spontaneous) typically occurs in C1–C2 and presents with Horner syndrome + stroke/TIA.'
+  },
+
+  {
+    id: 'ICA_CERV_L',
+    name: 'Internal Carotid Artery (Left) — Cervical + Petrous (C1–C5)',
+    abbreviation: 'ICA C1–5 (L)',
+    territory: 'Anterior — ascending to supply left cerebral hemisphere',
+    color: ANT,
+    radius: 0.23,
+    points: [
+      V(-1.8, -13.0, -0.9),
+      V(-2.0,  -9.0, -0.8),
+      V(-2.2,  -6.0, -0.5),
+      V(-2.4,  -4.0, -0.8),
+      V(-2.5,  -3.0, -1.0),  // connects to existing ICA_L (C6 cavernous) model
+    ],
+    labelOffset: V(-0.55, 0, 0.2),
+    notes: 'C1–C5 of the left ICA. The cervical segment (C1) is the longest, running without branches from C3–C4 to the skull base. ICA accounts for ~80% of cerebral blood flow. Carotid stenosis of ≥70% diameter reduction at the bifurcation significantly increases stroke risk — carotid endarterectomy is indicated for symptomatic stenosis ≥50% and asymptomatic ≥60–80% depending on guidelines.'
+  },
+
+  {
+    id: 'ECA_R',
+    name: 'External Carotid Artery (Right)',
+    abbreviation: 'ECA (R)',
+    territory: 'External — face, scalp, meninges (not brain parenchyma)',
+    color: EXT,
+    radius: 0.16,
+    points: [
+      V( 1.8, -13.0, -0.9),  // origin at CCA bifurcation
+      V( 2.4, -11.0, -0.4),  // coursing superolaterally toward face
+      V( 3.2,  -9.0,  0.2),  // distributing branches (schematic terminus)
+    ],
+    labelOffset: V(0.4, 0, 0.3),
+    notes: 'Arises from CCA bifurcation, anterior and medial to the ICA at origin. Supplies the face, scalp, mouth, meninges, and skull. Eight major branches (superior thyroid, ascending pharyngeal, lingual, facial, occipital, posterior auricular, maxillary, superficial temporal). The middle meningeal artery (branch of maxillary artery) is clinically critical — it runs in the epidural space and can bleed into it following temporal bone fracture, causing epidural hematoma. ECA collateralizes with ophthalmic artery (ICA branch) in carotid occlusive disease.'
+  },
+
+  {
+    id: 'ECA_L',
+    name: 'External Carotid Artery (Left)',
+    abbreviation: 'ECA (L)',
+    territory: 'External — face, scalp, meninges (not brain parenchyma)',
+    color: EXT,
+    radius: 0.16,
+    points: [
+      V(-1.8, -13.0, -0.9),
+      V(-2.4, -11.0, -0.4),
+      V(-3.2,  -9.0,  0.2),
+    ],
+    labelOffset: V(-0.4, 0, 0.3),
+    notes: 'Left ECA. The ECA is typically anterior and medial to the ICA at their shared origin, then crosses lateral to the ICA higher in the neck. During carotid endarterectomy, the ECA origin must be cleared of plaque. The superficial temporal artery (ECA branch) is palpable at the temple and can be biopsied to diagnose giant cell arteritis (temporal arteritis).'
+  },
+
+  {
+    id: 'VA_CERV_R',
+    name: 'Vertebral Artery (Right) — Cervical V1–V3',
+    abbreviation: 'VA V1–3 (R)',
+    territory: 'Posterior — ascending to supply posterior fossa and brainstem',
+    color: POST,
+    radius: 0.14,
+    points: [
+      V( 2.2, -20.3, -0.6),  // V1: origin from first part of right subclavian
+      V( 1.9, -17.0, -1.4),  // V2: enters C6 transverse foramen, ascending through foramina
+      V( 1.8, -13.5, -2.0),  // V2: mid-cervical transverse foramina
+      V( 1.8,  -9.5, -2.8),  // V2: upper cervical transverse foramina
+      V( 2.0,  -6.5, -3.5),  // V3: exits C1, loops posteriorly around atlas
+      V( 2.0,  -4.0, -4.0),  // V4: enters foramen magnum (connects to existing VA_R)
+    ],
+    labelOffset: V(0.55, 0, 0),
+    notes: 'V1 (preforaminal): from subclavian to C6 transverse foramen. V2 (foraminal): runs through the transverse foramina of C6–C2, protected by bony canal but vulnerable to sudden rotation (chiropractic manipulation risk). V3 (atlantic): exits C2, curves around C1 posterior arch — the "V3 loop" is a surgical landmark. V4 (intracranial): enters foramen magnum. Vertebral artery dissection can be spontaneous or traumatic, presenting with neck pain + posterior circulation stroke.'
+  },
+
+  {
+    id: 'VA_CERV_L',
+    name: 'Vertebral Artery (Left) — Cervical V1–V3',
+    abbreviation: 'VA V1–3 (L)',
+    territory: 'Posterior — ascending to supply posterior fossa and brainstem',
+    color: POST,
+    radius: 0.14,
+    points: [
+      V(-2.2, -20.3, -0.6),  // V1: origin from first part of left subclavian
+      V(-1.9, -17.0, -1.4),  // V2: ascending through cervical transverse foramina
+      V(-1.8, -13.5, -2.0),  // V2: mid-cervical
+      V(-1.8,  -9.5, -2.8),  // V2: upper cervical
+      V(-2.0,  -6.5, -3.5),  // V3: atlas loop
+      V(-2.0,  -4.0, -4.0),  // V4: foramen magnum (connects to existing VA_L)
+    ],
+    labelOffset: V(-0.55, 0, 0),
+    notes: 'Left VA is dominant in ~60% of people. V1–V3 cervical course mirrors right VA. Left VA more commonly involved in spontaneous dissection. The V2 segment within the transverse foramina is protected from most traumas but vulnerable to extreme neck rotation — relevant in both chiropractic manipulation and positioning during surgery. Doppler ultrasound can assess V1 flow at the subclavian origin.'
+  },
+
+]; // end VESSEL_DATA
+
+// ─── BIFURCATION JUNCTION SPHERES ────────────────────────────────────────────
+const JUNCTION_DATA = [
+  // CoW-level bifurcations (existing)
+  { position: V(-2.0,  2.5,  0.0), radius: 0.28, color: ANT  }, // left ICA terminus
+  { position: V( 2.0,  2.5,  0.0), radius: 0.28, color: ANT  }, // right ICA terminus
+  { position: V( 0.0,  2.5, -2.0), radius: 0.22, color: POST }, // basilar tip / PCA origin
+  { position: V( 0.0, -2.0, -3.0), radius: 0.18, color: POST }, // VA convergence / basilar origin
+  { position: V(-0.3,  2.5,  0.6), radius: 0.09, color: ANT  }, // left AComm-ACA junction
+  { position: V( 0.3,  2.5,  0.6), radius: 0.09, color: ANT  }, // right AComm-ACA junction
+  { position: V( 0.0,  2.5,  0.6), radius: 0.13, color: ANT  }, // ACA A1/A2 junction (midline)
+  // Cervical/lower vessel junctions (new)
+  { position: V( 1.8, -13.0, -0.9), radius: 0.27, color: ANT  }, // right carotid bifurcation
+  { position: V(-1.8, -13.0, -0.9), radius: 0.27, color: ANT  }, // left carotid bifurcation
+  { position: V( 1.5, -20.8, -0.8), radius: 0.44, color: SYST }, // brachiocephalic terminus → CCA_R + subclavian_R
+  { position: V( 0.8, -23.0, -1.3), radius: 0.44, color: SYST }, // arch → brachiocephalic origin
+  { position: V(-0.2, -22.5, -1.5), radius: 0.27, color: ANT  }, // arch → left CCA origin
+  { position: V(-1.0, -23.0, -2.0), radius: 0.40, color: SYST }, // arch → left subclavian origin
+  { position: V( 2.5, -3.0, -1.0),  radius: 0.26, color: ANT  }, // right ICA: cervical meets cavernous
+  { position: V(-2.5, -3.0, -1.0),  radius: 0.26, color: ANT  }, // left ICA: cervical meets cavernous
+  { position: V( 2.0, -4.0, -4.0),  radius: 0.16, color: POST }, // right VA: V3 meets V4
+  { position: V(-2.0, -4.0, -4.0),  radius: 0.16, color: POST }, // left VA: V3 meets V4
+];
+
+// ─── CAMERA PRESETS ──────────────────────────────────────────────────────────
+const COW_CENTER  = V(0,  1.0, -1.5);  // center of the CoW ring
+const FULL_CENTER = V(0, -9.0, -1.5);  // midpoint of full aorta-to-brain model
+
+const CAMERA_PRESETS = {
+  default:      { pos: V(18,   -4,  48), target: FULL_CENTER },  // full model on startup
+  inferior:     { pos: V( 0,  -14,  -1), target: COW_CENTER  },  // basal view of CoW
+  lateral:      { pos: V(-13,   2,  -1), target: COW_CENTER  },  // from patient's left
+  anterior:     { pos: V( 0,    2,  14), target: COW_CENTER  },  // from in front
+  cowOverview:  { pos: V( 8,    6,   8), target: COW_CENTER  },  // CoW ring close-up
+  fullAnatomy:  { pos: V(18,   -4,  48), target: FULL_CENTER },  // full aorta-to-brain
+};
+
+// ─── GLOBALS ─────────────────────────────────────────────────────────────────
+let renderer, labelRenderer, scene, camera, controls;
+const interactableMeshes = [];
+let labelsVisible = true;
+let hoveredMesh = null;
+let selectedMesh = null;
+let mouseDownPos = { x: 0, y: 0 };
+let cameraTweenId = null;
+
+// ─── INIT SCENE ──────────────────────────────────────────────────────────────
+function initScene() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0f);
+  scene.fog = new THREE.FogExp2(0x0a0a0f, 0.005);
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.copy(CAMERA_PRESETS.default.pos);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.getElementById('scene-container').appendChild(renderer.domElement);
+
+  labelRenderer = new THREE.CSS2DRenderer();
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.domElement.style.position = 'fixed';
+  labelRenderer.domElement.style.top = '0';
+  labelRenderer.domElement.style.left = '0';
+  labelRenderer.domElement.style.pointerEvents = 'none';
+  document.getElementById('label-container').appendChild(labelRenderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.copy(CAMERA_PRESETS.default.target);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.screenSpacePanning = true;
+  controls.mouseButtons = {
+    LEFT:   THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.PAN,
+    RIGHT:  THREE.MOUSE.PAN,
+  };
+  controls.minDistance = 3;
+  controls.maxDistance = 150;
+  controls.update();
+
+  // Three-point lighting
+  scene.add(new THREE.AmbientLight(0x404040, 0.8));
+  const key = new THREE.DirectionalLight(0xfff5e0, 1.2);
+  key.position.set(-5, 8, 5);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xe0eeff, 0.4);
+  fill.position.set(8, 2, 3);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.3);
+  rim.position.set(0, -3, -8);
+  scene.add(rim);
+}
+
+// ─── BRAIN CONTEXT ───────────────────────────────────────────────────────────
+function buildBrainContext() {
+  // Brainstem ellipsoid — gives spatial grounding without distracting from vessels
+  const bsGeom = new THREE.SphereGeometry(1, 32, 32);
+  bsGeom.scale(2.0, 3.5, 1.8);
+  const brainstem = new THREE.Mesh(bsGeom, new THREE.MeshPhongMaterial({
+    color: 0x8B7355,
+    transparent: true,
+    opacity: 0.13,
+    depthWrite: false,
+    side: THREE.FrontSide,
+  }));
+  brainstem.position.set(0, -1.0, -2.8);
+  brainstem.renderOrder = 1;
+  scene.add(brainstem);
+
+  // Sella turcica reference plane
+  const sella = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.2, 2.2, 0.04, 48),
+    new THREE.MeshPhongMaterial({
+      color: 0x888899,
+      transparent: true,
+      opacity: 0.17,
+      depthWrite: false,
+    })
+  );
+  sella.position.set(0, 0, -0.5);
+  sella.renderOrder = 1;
+  scene.add(sella);
+
+  // Sella label (context, not a vessel label)
+  const sellaDiv = document.createElement('div');
+  sellaDiv.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.28);pointer-events:none;font-family:Arial,sans-serif;white-space:nowrap;';
+  sellaDiv.textContent = 'sella turcica level';
+  const sellaLabel = new THREE.CSS2DObject(sellaDiv);
+  sellaLabel.position.set(2.5, 0.08, -0.5);
+  sella.add(sellaLabel);
+}
+
+// ─── BUILD VESSELS ───────────────────────────────────────────────────────────
+function buildVessels() {
+  VESSEL_DATA.forEach(data => {
+    const curve = new THREE.CatmullRomCurve3(data.points);
+    const geo = new THREE.TubeGeometry(curve, 64, data.radius, 16, false);
+    const colorHex = parseInt(data.color.slice(1), 16);
+    const mat = new THREE.MeshPhongMaterial({
+      color: colorHex,
+      emissive: 0x000000,
+      shininess: 85,
+      specular: 0x3a3a3a,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.userData = Object.assign({}, data, { originalColorHex: colorHex });
+
+    // Abbreviation label
+    const div = document.createElement('div');
+    div.className = 'vessel-label';
+    div.textContent = data.abbreviation;
+    const label = new THREE.CSS2DObject(div);
+    label.position.copy(curve.getPoint(0.5)).add(data.labelOffset);
+    label.visible = labelsVisible;
+    mesh.add(label);
+
+    scene.add(mesh);
+    interactableMeshes.push(mesh);
+  });
+}
+
+// ─── BUILD JUNCTION SPHERES ──────────────────────────────────────────────────
+function buildJunctions() {
+  JUNCTION_DATA.forEach(jd => {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(jd.radius, 16, 16),
+      new THREE.MeshPhongMaterial({
+        color: parseInt(jd.color.slice(1), 16),
+        shininess: 85,
+        specular: 0x3a3a3a,
+      })
+    );
+    mesh.position.copy(jd.position);
+    scene.add(mesh);
+    // deliberately NOT added to interactableMeshes
+  });
+}
+
+// ─── CAMERA TWEEN ────────────────────────────────────────────────────────────
+function tweenCamera(preset, durationMs) {
+  durationMs = durationMs || 800;
+  const startPos    = camera.position.clone();
+  const startTarget = controls.target.clone();
+  const endPos      = preset.pos.clone();
+  const endTarget   = preset.target.clone();
+  const t0          = performance.now();
+
+  if (cameraTweenId) cancelAnimationFrame(cameraTweenId);
+
+  (function step() {
+    const t = Math.min((performance.now() - t0) / durationMs, 1);
+    const e = t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; // ease-in-out quad
+    camera.position.lerpVectors(startPos, endPos, e);
+    controls.target.lerpVectors(startTarget, endTarget, e);
+    controls.update();
+    if (t < 1) cameraTweenId = requestAnimationFrame(step);
+  })();
+}
+
+// ─── INTERACTION ─────────────────────────────────────────────────────────────
+const raycaster  = new THREE.Raycaster();
+const mouseNDC   = new THREE.Vector2();
+const tooltip    = document.getElementById('tooltip');
+const infoPanel  = document.getElementById('info-panel');
+
+function onMouseMove(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width)  *  2 - 1;
+  mouseNDC.y = ((e.clientY - rect.top)  / rect.height) * -2 + 1;
+
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hits = raycaster.intersectObjects(interactableMeshes);
+
+  if (hoveredMesh && hoveredMesh !== selectedMesh) {
+    hoveredMesh.material.emissive.setHex(0x000000);
+  }
+
+  if (hits.length > 0) {
+    hoveredMesh = hits[0].object;
+    if (hoveredMesh !== selectedMesh) {
+      hoveredMesh.material.emissive.setHex(0x3a3a3a);
+    }
+    // Keep tooltip within viewport
+    const tx = Math.min(e.clientX + 14, window.innerWidth - 330);
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top  = (e.clientY - 8) + 'px';
+    tooltip.textContent = hoveredMesh.userData.name;
+    tooltip.style.display = 'block';
+    renderer.domElement.style.cursor = 'pointer';
+  } else {
+    hoveredMesh = null;
+    tooltip.style.display = 'none';
+    renderer.domElement.style.cursor = 'default';
+  }
+}
+
+function onMouseDown(e) {
+  mouseDownPos = { x: e.clientX, y: e.clientY };
+}
+
+function onMouseUp(e) {
+  const dx = e.clientX - mouseDownPos.x;
+  const dy = e.clientY - mouseDownPos.y;
+  if (Math.sqrt(dx*dx + dy*dy) < 5) handleClick();
+}
+
+function handleClick() {
+  if (hoveredMesh) {
+    if (selectedMesh && selectedMesh !== hoveredMesh) {
+      selectedMesh.material.emissive.setHex(0x000000);
+    }
+    selectedMesh = hoveredMesh;
+    selectedMesh.material.emissive.setHex(0x555555);
+    showInfoPanel(selectedMesh.userData);
+  } else {
+    if (selectedMesh) {
+      selectedMesh.material.emissive.setHex(0x000000);
+      selectedMesh = null;
+    }
+    infoPanel.style.display = 'none';
+  }
+}
+
+function showInfoPanel(data) {
+  document.getElementById('ip-dot').style.background = data.color;
+  document.getElementById('ip-title').textContent    = data.name;
+  document.getElementById('ip-territory').textContent = 'Territory: ' + data.territory;
+  document.getElementById('ip-notes').textContent    = data.notes;
+  infoPanel.style.display = 'block';
+}
+
+function initInteraction() {
+  renderer.domElement.addEventListener('mousemove',  onMouseMove);
+  renderer.domElement.addEventListener('mousedown',  onMouseDown);
+  renderer.domElement.addEventListener('mouseup',    onMouseUp);
+  document.getElementById('close-info').addEventListener('click', () => {
+    infoPanel.style.display = 'none';
+    if (selectedMesh) {
+      selectedMesh.material.emissive.setHex(0x000000);
+      selectedMesh = null;
+    }
+  });
+}
+
+// ─── UI ──────────────────────────────────────────────────────────────────────
+function initUI() {
+  const btnLabels = document.getElementById('btn-labels');
+  btnLabels.addEventListener('click', () => {
+    labelsVisible = !labelsVisible;
+    scene.traverse(obj => {
+      if (obj instanceof THREE.CSS2DObject) obj.visible = labelsVisible;
+    });
+    btnLabels.textContent = 'Labels: ' + (labelsVisible ? 'ON' : 'OFF');
+    btnLabels.classList.toggle('active', labelsVisible);
+  });
+
+  document.getElementById('btn-view-default').addEventListener('click',  () => tweenCamera(CAMERA_PRESETS.cowOverview));
+  document.getElementById('btn-view-inferior').addEventListener('click', () => tweenCamera(CAMERA_PRESETS.inferior));
+  document.getElementById('btn-view-lateral').addEventListener('click',  () => tweenCamera(CAMERA_PRESETS.lateral));
+  document.getElementById('btn-view-anterior').addEventListener('click', () => tweenCamera(CAMERA_PRESETS.anterior));
+  document.getElementById('btn-view-full').addEventListener('click',     () => tweenCamera(CAMERA_PRESETS.fullAnatomy));
+  document.getElementById('btn-view-reset').addEventListener('click',    () => tweenCamera(CAMERA_PRESETS.default));
+}
+
+// ─── RESIZE ──────────────────────────────────────────────────────────────────
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ─── ANIMATION LOOP ──────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();                     // required for damping
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);   // must follow WebGL render
+}
+
+// ─── BOOTSTRAP ───────────────────────────────────────────────────────────────
+initScene();
+buildBrainContext();
+buildVessels();
+buildJunctions();
+initInteraction();
+initUI();
+window.addEventListener('resize', onResize);
+animate();
+</script>
+</body>
+</html>
